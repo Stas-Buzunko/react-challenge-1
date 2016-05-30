@@ -1,52 +1,90 @@
 import React, { Component } from 'react';
-import Button from './components/Button';
+import UserList from './components/user_list';
+import ActiveUser from './components/active_user';
+import SearchBar from './components/search_bar';
+import Toolbar from './components/toolbar';
 
-
-export default class App extends Component {
+ class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      phrase: 'Нажми на кнопку!',
-      count: 0
+      users: [],
+      filteredUsers: [],
+      activeUser: {},
+      sortedBy: '',
     };
   }
-
-  updateBtn() {
-    const phrases = [
-      'ЖМИ!', 'Не останавливайся!',
-      'У тебя хорошо получается!', 'Красавчик!',
-      'Вот это и есть React!', 'Продолжай!',
-      'Пока ты тут нажимаешь кнопку другие работают!',
-      'Всё хватит!', 'Ну и зачем ты нажал?',
-      'В следующий раз тут будет полезный совет',
-      'Чего ты ждешь от этой кнопки?',
-      'Если дойдёшь до тысячи, то сразу научищься реакту',
-      'ой, всё!', 'Ты нажал кнопку столько раз, что обязан на ней жениться',
-      'У нас было 2 npm-пакета с реактом, 75 зависимостей от сторонних библиотек, '
-      + '5 npm-скриптов и целое множество плагинов галпа всех сортов и расцветок, '
-      + 'а также redux, jquery, mocha, пачка плагинов для eslint и ингерация с firebase. '
-      + 'Не то что бы это был необходимый набор для фронтенда. Но если начал собирать '
-      + 'вебпаком, становится трудно остановиться. Единственное, что вызывало у меня '
-      + 'опасения - это jquery. Нет ничего более беспомощного, безответственного и испорченного, '
-      + 'чем рядовой верстальщик без jquery. Я знал, что рано или поздно мы перейдем и на эту дрянь.',
-      'coub про кота-джедая: http://coub.com/view/spxn',
-      'Дальнобойщики на дороге ярости: http://coub.com/view/6h0dy',
-      'Реакция коллег на ваш код: http://coub.com/view/5rjjw',
-      'Енот ворует еду: http://coub.com/view/xi3cio',
-      'Российский дизайн: http://coub.com/view/16adw5i0'
-    ];
-    this.setState({
-      count: this.state.count + 1,
-      phrase: phrases[parseInt(Math.random() * phrases.length)]
+  componentDidMount() {
+    $.ajax({
+      url: this.props.url,
+      dataType: 'json',
+      cache: false,
+      success: function(users) {
+        this.setState({
+          users: users,
+          filteredUsers: users,
+          activeUser: users[0]
+        });
+      }.bind(this),
     });
   }
+  filterUser(filterText) {
+    var rows = [];
+    this.state.users.forEach(function(user) {
+      if (user.name.indexOf(filterText) === -1 ) {
+        return;
+      }
+      rows.push(user);
+    });
+    this.setState({
+      filteredUsers: rows,
+      activeUser: rows[0],
+    });
+  }
+  sortUsers(field) {
+    if (this.state.sortedBy === field) {
+      let reversedUsers = this.state.filteredUsers.reverse();
+      this.setState({
+        filteredUsers: reversedUsers,
+        activeUser: reversedUsers[0]
+      })
+    } else {
+      let sortedUsers = this.state.filteredUsers.sort(function(a, b) {
+      var nameA = a[`${field}`];
+      var nameB = b[`${field}`];
+       if (nameA < nameB) {
+        return -1;
+      }
+      if (nameA > nameB) {
+        return 1;
+      }
+
+      return 0;
+      });
+      this.setState({
+        filteredUsers: sortedUsers,
+        activeUser: sortedUsers[0],
+        sortedBy: field,
+      });
+    }
+    
+  }
+  
 
   render() {
     return (
-      <div className="container app">
-        <Button count={this.state.count} update={this.updateBtn.bind(this)} />
-        <p style={{marginTop: 2 + 'rem'}}>{this.state.phrase}</p>
+      <div className="app container-fluid">
+        <SearchBar onSearchTextChange={(filterText) => this.filterUser(filterText)}/>
+        <Toolbar onButtonClick={(field) => this.sortUsers(field)}/>
+        <div className="row">
+          <ActiveUser user={this.state.activeUser}/>
+          <UserList 
+            users={this.state.filteredUsers}
+            onUserSelect={selectedUser => this.setState({activeUser: selectedUser}) }
+          />
+        </div>
       </div>
     );
   }
 }
+export default App;
